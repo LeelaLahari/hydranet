@@ -1,0 +1,61 @@
+# HydraNet master config (all stages read this one file)
+seed: 42
+paths:
+  drive_root: /content/drive/MyDrive/hydranet   # Colab persistent root
+  data: data
+  processed: data/processed
+  checkpoints: checkpoints
+  reports: reports
+
+data:
+  dataset: camels-us            # or 'toy'
+  n_basins: 40                  # keep small for Colab
+  val_basin_frac: 0.2           # SPATIAL holdout: entire basins, not random days
+  forcings: daymet
+  seq_length: 365               # input window, days
+  target_horizon: 1             # forecast lead time, days (1 = next day)
+  train_end: "2005-09-30"
+  val_end: "2010-09-30"
+  target: streamflow            # normalized inside the pipeline
+  static_features:              # CAMELS catchment attributes to use
+    - elev_mean
+    - slope_mean
+    - p_mean
+    - pet_mean
+    - aridity
+    - frac_forest
+    - soil_depth_pelletier
+    - gvf_max
+    - gauge_lat
+    - gauge_lon
+
+lstm:
+  hidden_size: 128
+  num_layers: 1
+  dropout: 0.25
+  emb_dim: 8
+  quantiles: [0.1, 0.5, 0.9]
+  lr: 0.001
+  weight_decay: 0.00001
+  batch_size: 256
+  epochs: 40
+  patience: 6
+  mc_samples: 30                # MC-dropout samples at inference
+  grad_clip: 1.0
+
+cnn:
+  in_channels: 6                # dem, slope, twi, hand, precip_accum, runoff_norm
+  base_channels: 32
+  patch_size: 64
+  lr: 0.0005
+  batch_size: 64
+  epochs: 30
+  patience: 5
+  label_noise: 0.02             # label smoothing on HAND-derived labels
+
+extent_data:
+  patches_per_basin: 24
+  hand_quantiles: [0.55, 0.65, 0.75, 0.85]   # event magnitudes -> pseudo labels
+
+eval:
+  flow_bins: [0.0, 0.1, 0.25, 0.5, 1.0]      # reliability diagram bins (normalized flow)
